@@ -145,9 +145,11 @@
     }
 
     .image-fallback {
-      font-size: 17px;
-      color: #8b7656;
       padding: 20px;
+      color: #8b7656;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
     }
 
     .pokemon-name {
@@ -233,6 +235,10 @@
       font-size: 14px;
     }
 
+    .footer a {
+      color: #80612c;
+    }
+
     [hidden] {
       display: none !important;
     }
@@ -286,7 +292,6 @@
       <p class="section-description">
         16가지 유형 중 나에게 해당하는 유형을 눌러 보세요.
       </p>
-
       <div class="mbti-grid" id="mbtiGrid"></div>
     </section>
 
@@ -295,13 +300,7 @@
       <div class="result-label" id="resultMbti"></div>
 
       <div class="pokemon-image-box" id="pokemonImageBox">
-        <img
-          class="pokemon-image"
-          id="pokemonImage"
-          src=""
-          alt="선택한 포켓몬 이미지"
-          referrerpolicy="no-referrer"
-        >
+        <div class="image-fallback">포켓몬 이미지를 준비하고 있어요.</div>
       </div>
 
       <h2 class="pokemon-name" id="pokemonName"></h2>
@@ -324,18 +323,25 @@
     </section>
 
     <footer class="footer">
-      포켓몬 이미지 출처: PokéAPI Sprites<br>
+      포켓몬 이미지 출처:
+      <a href="https://github.com/PokeAPI/sprites"
+         target="_blank" rel="noopener noreferrer">PokéAPI Sprites</a>
+      <br>
       포켓몬과 MBTI의 성격을 연결한 재미용 콘텐츠입니다. 😊
     </footer>
 
   </main>
 
   <script>
-    // 이미지 주소는 포켓몬 전국도감 번호를 사용합니다.
-    // 이미지를 표시하려면 인터넷 연결이 필요합니다.
-    const IMAGE_BASE =
-      "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/";
+    // 포켓몬 이미지 주소
+    const IMAGE_URLS = {
+      artwork:
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/",
+      sprite:
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/"
+    };
 
+    // 16가지 MBTI별 포켓몬 정보
     const pokemonData = {
       ISTJ: {
         name: "꼬부기",
@@ -557,7 +563,6 @@
     const result = document.getElementById("result");
     const mbtiGrid = document.getElementById("mbtiGrid");
     const resetButton = document.getElementById("resetButton");
-    const pokemonImage = document.getElementById("pokemonImage");
     const pokemonImageBox = document.getElementById("pokemonImageBox");
 
     // MBTI 버튼 16개 만들기
@@ -576,30 +581,57 @@
       mbtiGrid.appendChild(button);
     });
 
-    // 포켓몬 이미지 표시
+    // 이미지 로드 실패 시 다른 주소로 자동 재시도
     function showPokemonImage(data) {
-      pokemonImageBox.innerHTML = "";
+      pokemonImageBox.replaceChildren();
 
       const img = document.createElement("img");
       img.className = "pokemon-image";
-      img.alt = data.name + " 공식 아트워크";
+      img.alt = data.name + " 포켓몬 이미지";
       img.loading = "eager";
       img.referrerPolicy = "no-referrer";
 
-      img.onerror = function() {
-        // 이미지 로드에 실패하면 안내 문구 표시
-        pokemonImageBox.innerHTML = "";
+      const urls = [
+        IMAGE_URLS.artwork + data.id + ".png",
+        IMAGE_URLS.sprite + data.id + ".png"
+      ];
+
+      let index = 0;
+
+      function showFallback() {
+        pokemonImageBox.replaceChildren();
 
         const message = document.createElement("div");
         message.className = "image-fallback";
         message.textContent =
-          "이미지를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.";
+          "이미지를 불러올 수 없습니다.\n" +
+          "인터넷 연결이나 이미지 사이트 접근을 확인해 주세요.";
 
         pokemonImageBox.appendChild(message);
-      };
+      }
 
-      img.src = IMAGE_BASE + data.id + ".png";
+      function tryNextImage() {
+        if (index >= urls.length) {
+          showFallback();
+          return;
+        }
+
+        const currentUrl = urls[index];
+        index++;
+
+        img.onload = function() {
+          img.style.display = "block";
+        };
+
+        img.onerror = function() {
+          tryNextImage();
+        };
+
+        img.src = currentUrl;
+      }
+
       pokemonImageBox.appendChild(img);
+      tryNextImage();
     }
 
     // 선택한 MBTI 결과 표시
